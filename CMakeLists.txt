@@ -148,7 +148,7 @@ if(CEF_FOUND)
 
     # CEF include root (for #include "include/cef_app.h" etc.)
     # We apply this to both zap and the generated autogen files
-    target_include_directories(zap PRIVATE "${CEF_ROOT}")
+    target_include_directories(zap PRIVATE "${CEF_ROOT}" "${CEF_ROOT}/include")
     set_target_properties(zap PROPERTIES AUTOMOC_MOC_OPTIONS "-D_UNICODE;-DUNICODE")
 
     # Link the wrapper (builds from source) + the main CEF shared library

@@ -14,7 +14,6 @@
 #ifdef ZAP_CEF_ENABLED
 #include "app/ZapClient.h"
 #include "include/cef_browser.h"
-#include "include/cef_browser_host.h"
 #endif
 
 #include <QApplication>
