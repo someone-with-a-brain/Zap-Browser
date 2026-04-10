@@ -11,23 +11,36 @@ set(CMAKE_AUTOUIC ON)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-
-# ─── CEF Root ────────────────────────────────────────────────────────────────
-# Download CEF from: https://cef-builds.spotifycdn.com/index.html
-# Place extracted folder at: third_party/cef/
-set(CEF_ROOT "${CMAKE_SOURCE_DIR}/third_party/cef" CACHE PATH "CEF root directory")
-list(APPEND CMAKE_MODULE_PATH "${CEF_ROOT}/cmake")
-
 # ─── Qt6 ─────────────────────────────────────────────────────────────────────
 find_package(Qt6 REQUIRED COMPONENTS Core Widgets Network)
 
 # ─── CEF ─────────────────────────────────────────────────────────────────────
-if(EXISTS "${CEF_ROOT}/cmake/cef_variables.cmake")
-    include("${CEF_ROOT}/cmake/cef_variables.cmake")
-    include("${CEF_ROOT}/cmake/cef_macros.cmake")
+# CEF's cmake files have a guard: cef_variables.cmake must be loaded via
+# find_package(CEF), NOT via include() directly.
+#
+# CEF cmake file lookup order:
+#   1. CMake searches CMAKE_MODULE_PATH for FindCEF.cmake
+#   2. FindCEF.cmake sets _CEF_ROOT_EXPLICIT then includes cef_variables.cmake
+#   3. cef_variables.cmake sets CEF_FOUND, CEF_BINARY_DIR, etc.
+#
+set(CEF_ROOT "${CMAKE_SOURCE_DIR}/third_party/cef" CACHE PATH "CEF root directory")
+
+if(EXISTS "${CEF_ROOT}/cmake/FindCEF.cmake")
+    # Add CEF's cmake/ to module path so find_package can find FindCEF.cmake
+    list(APPEND CMAKE_MODULE_PATH "${CEF_ROOT}/cmake")
+    find_package(CEF REQUIRED)
+
+    # Build the CEF C++ wrapper library (required by all CEF apps)
+    # CEF_LIBCEF_DLL_WRAPPER_PATH is set by FindCEF / cef_variables.cmake
+    add_subdirectory("${CEF_LIBCEF_DLL_WRAPPER_PATH}" libcef_dll_wrapper)
+
+    message(STATUS "CEF found: ${CEF_VERSION}")
     set(CEF_FOUND TRUE)
 else()
-    message(WARNING "CEF not found at ${CEF_ROOT}. Build will use stub mode.")
+    message(WARNING
+        "CEF not found at ${CEF_ROOT}. "
+        "Run scripts/download_cef.ps1 or place the extracted CEF SDK at ${CEF_ROOT}. "
+        "Compiling in stub mode (no web rendering).")
     set(CEF_FOUND FALSE)
 endif()
 
@@ -53,7 +66,6 @@ endif()
 if(EXISTS "${CMAKE_SOURCE_DIR}/third_party/nlohmann_json/json.hpp")
     set(JSON_INCLUDE "${CMAKE_SOURCE_DIR}/third_party/nlohmann_json")
 else()
-    # Try find_package
     find_package(nlohmann_json QUIET)
     if(nlohmann_json_FOUND)
         set(JSON_INCLUDE "")
@@ -128,20 +140,21 @@ target_link_libraries(zap PRIVATE
 # ─── CEF Linking (when available) ────────────────────────────────────────────
 if(CEF_FOUND)
     target_compile_definitions(zap PRIVATE ZAP_CEF_ENABLED)
-    target_include_directories(zap PRIVATE ${CEF_ROOT})
-    target_link_directories(zap PRIVATE "${CEF_ROOT}/Release")
-    target_link_libraries(zap PRIVATE libcef libcef_dll_wrapper)
 
-    # Copy CEF runtime files to output
-    add_custom_command(TARGET zap POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-            "${CEF_ROOT}/Release"
-            "$<TARGET_FILE_DIR:zap>"
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-            "${CEF_ROOT}/Resources"
-            "$<TARGET_FILE_DIR:zap>"
-        COMMENT "Copying CEF runtime files..."
+    # CEF include root (for #include "include/cef_app.h" etc.)
+    target_include_directories(zap PRIVATE "${CEF_ROOT}")
+
+    # Link the wrapper (builds from source) + the main CEF shared library
+    # CEF_STANDARD_LIBS is set by cef_variables.cmake (e.g. libcef.lib on Win)
+    target_link_libraries(zap PRIVATE
+        libcef_dll_wrapper
+        ${CEF_STANDARD_LIBS}
     )
+
+    # Copy CEF runtime binaries (libcef.dll, etc.) to output directory.
+    # COPY_FILES is a macro from cef_macros.cmake loaded by find_package(CEF).
+    COPY_FILES(zap "${CEF_BINARY_FILES}"   "${CEF_BINARY_DIR}"   "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
+    COPY_FILES(zap "${CEF_RESOURCE_FILES}" "${CEF_RESOURCE_DIR}" "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
 endif()
 
 # ─── Copy Assets ─────────────────────────────────────────────────────────────
