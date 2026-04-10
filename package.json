@@ -1,0 +1,27 @@
+{
+  "name": "browser",
+  "version": "1.0.0",
+  "description": "A lightweight, privacy-first Chromium-based browser built in C++20.",
+  "main": "main/main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/someone-with-a-brain/Zap-Browser.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/someone-with-a-brain/Zap-Browser/issues"
+  },
+  "homepage": "https://github.com/someone-with-a-brain/Zap-Browser#readme",
+  "dependencies": {
+    "axios": "^1.15.0",
+    "better-sqlite3": "^12.8.0",
+    "electron": "^41.2.0"
+  }
+}

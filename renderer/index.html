@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZAP Browser</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <!-- Google Fonts: Inter and Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="dark-theme">
+    <div id="app-container">
+        <!-- ─── Top Bar ─── -->
+        <header id="top-bar">
+            <div id="tabs-container">
+                <div class="tab active" data-tab-id="1">
+                    <span class="tab-title">New Tab</span>
+                    <button class="close-tab-btn">×</button>
+                </div>
+                <button id="add-tab-btn">+</button>
+            </div>
+            
+            <div id="nav-bar">
+                <div class="nav-controls">
+                    <button id="back-btn" class="nav-btn">←</button>
+                    <button id="forward-btn" class="nav-btn">→</button>
+                    <button id="reload-btn" class="nav-btn">↻</button>
+                </div>
+                
+                <div id="address-bar-container">
+                    <div id="privacy-indicator">🔐</div>
+                    <input type="text" id="address-bar" placeholder="Search or enter URL" value="https://duckduckgo.com">
+                    <div id="tor-toggle-container">
+                        <span class="tor-label">Tor</span>
+                        <label class="switch">
+                            <input type="checkbox" id="tor-toggle-input">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="extra-controls">
+                    <button id="ai-toggle-btn" class="feature-btn">🧠 AI</button>
+                    <button id="settings-btn" class="feature-btn">⚙️</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- ─── Main Content Area ─── -->
+        <main id="content-area">
+            <div id="web-container">
+                <!-- webview elements will be injected here -->
+                <webview id="wv-1" class="site-view active" src="https://duckduckgo.com"></webview>
+            </div>
+
+            <!-- AI Sidebar -->
+            <aside id="ai-sidebar" class="collapsed">
+                <div class="sidebar-header">
+                    <h3>Zap AI Assistant</h3>
+                    <button id="close-ai-btn">×</button>
+                </div>
+                <div id="ai-chat-history">
+                    <div class="ai-message bot">
+                        Hello! I'm ZAP AI, your local privacy-first assistant. How can I help you browse today?
+                    </div>
+                </div>
+                <div class="ai-input-area">
+                    <textarea id="ai-prompt" placeholder="Ask anything..."></textarea>
+                    <button id="send-ai-btn">Send</button>
+                </div>
+            </aside>
+        </main>
+
+        <!-- ─── Bottom Status Bar ─── -->
+        <footer id="status-bar">
+            <div class="status-left">
+                <span id="tor-status" class="status-item">Tor: Disconnected</span>
+            </div>
+            <div class="status-right">
+                <span id="app-version" class="status-item">v1.0.0</span>
+            </div>
+        </footer>
+    </div>
+
+    <script src="scripts/app.js"></script>
+</body>
+</html>
