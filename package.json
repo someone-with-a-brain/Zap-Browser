@@ -5,7 +5,26 @@
   "main": "main/main.js",
   "scripts": {
     "start": "electron .",
+    "dist": "electron-builder --win --x64",
     "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "build": {
+    "appId": "com.zap.browser",
+    "productName": "Zap Browser",
+    "copyright": "Copyright © 2026 Zap Team",
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
   },
   "repository": {
     "type": "git",
@@ -23,5 +42,8 @@
     "axios": "^1.15.0",
     "better-sqlite3": "^12.8.0",
     "electron": "^41.2.0"
+  },
+  "devDependencies": {
+    "electron-builder": "^26.8.1"
   }
 }
