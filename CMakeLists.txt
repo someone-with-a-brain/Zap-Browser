@@ -19,6 +19,16 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 # ─── Qt6 ─────────────────────────────────────────────────────────────────────
 find_package(Qt6 REQUIRED COMPONENTS Core Widgets Network)
 
+# ─── MSVC Runtime Alignment ──────────────────────────────────────────────────
+if(MSVC)
+    # Force /MD (Dynamic CRT) to match Qt and avoid redefinition errors
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
+    
+    # CEF sandbox requires /MT, so we must disable it when using /MD
+    set(USE_SANDBOX OFF CACHE BOOL "Use sandbox" FORCE)
+    set(CEF_RUNTIME_LIBRARY_FLAG "/MD" CACHE STRING "Runtime library flag" FORCE)
+endif()
+
 # ─── CEF ─────────────────────────────────────────────────────────────────────
 # CEF's cmake files have a guard: cef_variables.cmake must be loaded via
 # find_package(CEF), NOT via include() directly.
@@ -135,6 +145,17 @@ target_include_directories(zap PRIVATE
     ${JSON_INCLUDE}
 )
 
+# ─── Linker search paths for libcef.lib ──────────────────────────────────────
+if(CEF_FOUND)
+    # Ensure the linker can find libcef.lib in the SDK's Release/Debug folders
+    target_link_directories(zap PRIVATE 
+        "${CEF_ROOT}/Release" 
+        "${CEF_ROOT}/Debug"
+    )
+endif()
+
+# ─── Linking ─────────────────────────────────────────────────────────────────
+# Note: libcef_dll_wrapper must be linked *before* libcef.lib in some MSVC configurations
 target_link_libraries(zap PRIVATE
     Qt6::Core
     Qt6::Widgets
@@ -142,7 +163,6 @@ target_link_libraries(zap PRIVATE
     ${SQLITE3_LIB}
 )
 
-# ─── CEF Linking (when available) ────────────────────────────────────────────
 if(CEF_FOUND)
     target_compile_definitions(zap PRIVATE ZAP_CEF_ENABLED)
 
@@ -151,15 +171,12 @@ if(CEF_FOUND)
     target_include_directories(zap PRIVATE "${CEF_ROOT}" "${CEF_ROOT}/include")
     set_target_properties(zap PROPERTIES AUTOMOC_MOC_OPTIONS "-D_UNICODE;-DUNICODE")
 
-    # Link the wrapper (builds from source) + the main CEF shared library
-    # CEF_STANDARD_LIBS is set by cef_variables.cmake (e.g. libcef.lib on Win)
     target_link_libraries(zap PRIVATE
         libcef_dll_wrapper
         ${CEF_STANDARD_LIBS}
     )
 
     # Copy CEF runtime binaries (libcef.dll, etc.) to output directory.
-    # COPY_FILES is a macro from cef_macros.cmake loaded by find_package(CEF).
     COPY_FILES(zap "${CEF_BINARY_FILES}"   "${CEF_BINARY_DIR}"   "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
     COPY_FILES(zap "${CEF_RESOURCE_FILES}" "${CEF_RESOURCE_DIR}" "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
 endif()
