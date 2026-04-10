@@ -40,10 +40,10 @@
   "homepage": "https://github.com/someone-with-a-brain/Zap-Browser#readme",
   "dependencies": {
     "axios": "^1.15.0",
-    "better-sqlite3": "^12.8.0",
-    "electron": "^41.2.0"
+    "better-sqlite3": "^12.8.0"
   },
   "devDependencies": {
+    "electron": "^41.2.0",
     "electron-builder": "24.13.3"
   }
 }
