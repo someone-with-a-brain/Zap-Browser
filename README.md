@@ -79,7 +79,7 @@ ZAP Browser (C++20)
 ### Step 1 — Clone
 
 ```powershell
-git clone https://github.com/youruser/zap-browser.git
+git clone https://github.com/someone-with-a-brain/zap-browser.git
 cd zap-browser
 ```
 
