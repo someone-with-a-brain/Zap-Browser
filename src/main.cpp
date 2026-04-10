@@ -11,6 +11,11 @@
 #include <QApplication>
 #include <QDir>
 #include <QStandardPaths>
+#include <QTimer>
+
+#ifdef WIN32
+#include <windows.h>
+#endif
 
 #ifdef ZAP_CEF_ENABLED
 #include "include/cef_app.h"

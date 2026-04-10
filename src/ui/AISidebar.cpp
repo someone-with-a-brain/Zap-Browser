@@ -6,6 +6,7 @@
 #include <QSizePolicy>
 #include <QFont>
 #include <QDateTime>
+#include <QTextCursor>
 #include <QDebug>
 
 AISidebar::AISidebar(OllamaBridge* bridge, QWidget* parent)

@@ -4,6 +4,7 @@
 #include <QNetworkReply>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QJsonArray>
 #include <QByteArray>
 #include <QDebug>
 

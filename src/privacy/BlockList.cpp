@@ -9,6 +9,7 @@
 #include <QDebug>
 #include <algorithm>
 #include <regex>
+#include <sstream>
 
 BlockList::BlockList(QObject* parent)
     : QObject(parent)

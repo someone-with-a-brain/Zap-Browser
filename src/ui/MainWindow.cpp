@@ -37,6 +37,10 @@
 #include <QMessageBox>
 #include <QDebug>
 
+#ifdef WIN32
+#include <windows.h>
+#endif
+
 // ─────────────────────────────────────────────────────────────────────────────
 MainWindow::MainWindow(QWidget* parent)
     : QMainWindow(parent)
