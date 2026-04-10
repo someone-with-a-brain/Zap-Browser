@@ -1,0 +1,67 @@
+# ── Build Output ──────────────────────────────────────────────
+build/
+dist/
+*.user
+*.suo
+.vs/
+out/
+
+# ── Third Party (large binaries — downloaded by CI) ───────────
+third_party/cef/
+third_party/sqlite/sqlite3.c
+third_party/sqlite/sqlite3.h
+third_party/nlohmann_json/json.hpp
+
+# ── Tor Binary (bundle manually, too large for git) ───────────
+assets/tor/tor.exe
+assets/tor/geoip
+assets/tor/geoip6
+
+# ── Qt generated files ────────────────────────────────────────
+*.moc
+moc_*.cpp
+qrc_*.cpp
+ui_*.h
+
+# ── CMake cache ───────────────────────────────────────────────
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+install_manifest.txt
+CTestTestfile.cmake
+_deps/
+
+# ── MSVC ──────────────────────────────────────────────────────
+*.obj
+*.pdb
+*.ilk
+*.exp
+*.lib
+*.dll
+*.exe
+!scripts/
+
+# ── OS junk ───────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Editor ────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ── Logs ──────────────────────────────────────────────────────
+*.log
+cef.log
+cppcheck-report.txt
+
+# ── User data (should never be committed) ─────────────────────
+userdata/
+cache/
+tor_data/
+history.db
+bookmarks.json

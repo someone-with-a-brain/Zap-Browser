@@ -1,0 +1,263 @@
+name: ⚡ ZAP Browser — Build
+
+on:
+  push:
+    branches: [ main, master, dev ]
+    tags:     [ 'v*.*.*' ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:   # allow manual trigger from GitHub UI
+
+# ── Permissions ───────────────────────────────────────────────────────────────
+permissions:
+  contents: write   # needed to create GitHub Releases
+
+# ── Build Matrix ──────────────────────────────────────────────────────────────
+jobs:
+  build:
+    name: Build (${{ matrix.os-label }})
+    runs-on: ${{ matrix.runner }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner:    windows-latest
+            os-label:  Windows x64
+            preset:    windows-release
+            artifact:  zap-windows-x64
+
+    # ── Environment ───────────────────────────────────────────────────────────
+    env:
+      CEF_VERSION:  "131.3.1+g3c3b1d3+chromium-131.0.6778.205"
+      QT_VERSION:   "6.7.2"
+      BUILD_TYPE:   Release
+
+    steps:
+    # ── 1. Checkout ───────────────────────────────────────────────────────────
+    - name: 📥 Checkout source
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0   # full history for version tagging
+
+    # ── 2. Cache: CEF ─────────────────────────────────────────────────────────
+    - name: 💾 Cache CEF SDK
+      id: cache-cef
+      uses: actions/cache@v4
+      with:
+        path: third_party/cef
+        key: cef-${{ env.CEF_VERSION }}-windows64
+        restore-keys: cef-${{ env.CEF_VERSION }}-
+
+    # ── 3. Download CEF (if not cached) ───────────────────────────────────────
+    - name: ⬇️  Download & extract CEF
+      if: steps.cache-cef.outputs.cache-hit != 'true'
+      shell: pwsh
+      run: |
+        $ErrorActionPreference = "Stop"
+        $version = "$env:CEF_VERSION"
+        $encoded = [uri]::EscapeDataString($version)
+        $filename = "cef_binary_${version}_windows64.tar.bz2"
+        $url = "https://cef-builds.spotifycdn.com/$([uri]::EscapeDataString($filename))"
+
+        Write-Host "Downloading CEF: $filename"
+        Write-Host "From: $url"
+
+        # Download
+        $ProgressPreference = 'SilentlyContinue'
+        Invoke-WebRequest -Uri $url -OutFile "cef.tar.bz2" -TimeoutSec 300
+
+        Write-Host "Extracting..."
+        New-Item -ItemType Directory -Force -Path "third_party" | Out-Null
+
+        # Use 7z (pre-installed on GitHub runners)
+        & 7z x "cef.tar.bz2" -o"." -y | Out-Null
+        & 7z x "cef.tar"     -o"third_party" -y | Out-Null
+
+        # Rename to "cef"
+        $extracted = Get-ChildItem "third_party" -Directory | `
+          Where-Object { $_.Name -like "cef_binary_*" } | `
+          Select-Object -First 1
+        if ($extracted) {
+          Rename-Item $extracted.FullName "third_party\cef" -Force
+        }
+
+        Remove-Item "cef.tar.bz2","cef.tar" -Force -ErrorAction SilentlyContinue
+        Write-Host "CEF ready at third_party/cef"
+
+    # ── 4. Install Qt 6 ───────────────────────────────────────────────────────
+    - name: 🎨 Install Qt ${{ env.QT_VERSION }}
+      uses: jurplel/install-qt-action@v4
+      with:
+        version:   ${{ env.QT_VERSION }}
+        host:      windows
+        target:    desktop
+        arch:      win64_msvc2022_64
+        modules:   ''           # add extra Qt modules here if needed
+        cache:     true
+        cache-key-prefix: qt-${{ env.QT_VERSION }}-msvc2022-64
+
+    # ── 5. Download SQLite (amalgamation) ─────────────────────────────────────
+    - name: 💾 Cache SQLite
+      id: cache-sqlite
+      uses: actions/cache@v4
+      with:
+        path: third_party/sqlite
+        key: sqlite-3470200
+
+    - name: ⬇️  Download SQLite amalgamation
+      if: steps.cache-sqlite.outputs.cache-hit != 'true'
+      shell: pwsh
+      run: |
+        $ProgressPreference = 'SilentlyContinue'
+        New-Item -ItemType Directory -Force -Path "third_party/sqlite" | Out-Null
+        Invoke-WebRequest `
+          -Uri "https://www.sqlite.org/2024/sqlite-amalgamation-3470200.zip" `
+          -OutFile "sqlite.zip"
+        Expand-Archive -Path "sqlite.zip" -DestinationPath "." -Force
+
+        $dir = Get-ChildItem -Directory | `
+          Where-Object { $_.Name -like "sqlite-amalgamation-*" } | `
+          Select-Object -First 1
+        if ($dir) {
+          Copy-Item "$($dir.FullName)/sqlite3.c"  "third_party/sqlite/"
+          Copy-Item "$($dir.FullName)/sqlite3.h"  "third_party/sqlite/"
+          Remove-Item $dir.FullName -Recurse -Force
+        }
+        Remove-Item "sqlite.zip" -Force
+        Write-Host "SQLite ready"
+
+    # ── 6. Download nlohmann/json ─────────────────────────────────────────────
+    - name: ⬇️  Download nlohmann/json
+      shell: pwsh
+      run: |
+        New-Item -ItemType Directory -Force -Path "third_party/nlohmann_json" | Out-Null
+        $ProgressPreference = 'SilentlyContinue'
+        Invoke-WebRequest `
+          -Uri "https://github.com/nlohmann/json/releases/download/v3.11.3/json.hpp" `
+          -OutFile "third_party/nlohmann_json/json.hpp"
+        Write-Host "nlohmann/json ready"
+
+    # ── 7. Setup MSVC environment ──────────────────────────────────────────────
+    - name: 🔧 Setup MSVC (x64)
+      uses: ilammy/msvc-dev-cmd@v1
+      with:
+        arch: x64
+
+    # ── 8. Configure CMake ────────────────────────────────────────────────────
+    - name: ⚙️  Configure CMake
+      shell: pwsh
+      run: |
+        cmake -B build `
+          -G "Visual Studio 17 2022" `
+          -A x64 `
+          -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} `
+          -DCMAKE_PREFIX_PATH="$env:Qt6_DIR" `
+          -DCEF_ROOT="${{ github.workspace }}/third_party/cef" `
+          -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/dist"
+
+    # ── 9. Build ──────────────────────────────────────────────────────────────
+    - name: 🔨 Build ZAP Browser
+      shell: pwsh
+      run: |
+        cmake --build build `
+          --config ${{ env.BUILD_TYPE }} `
+          --parallel $env:NUMBER_OF_PROCESSORS
+
+    # ── 10. Collect artifacts ─────────────────────────────────────────────────
+    - name: 📦 Collect build artifacts
+      shell: pwsh
+      run: |
+        $outDir = "dist/zap-browser"
+        New-Item -ItemType Directory -Force -Path $outDir | Out-Null
+
+        # Main executable + DLLs from bin/Release
+        $binDir = "build/bin/Release"
+        if (Test-Path $binDir) {
+          Copy-Item "$binDir/*" $outDir -Recurse -Force
+        } else {
+          Write-Warning "Binary directory not found: $binDir"
+          Get-ChildItem build -Recurse -Filter "*.exe" | ForEach-Object {
+            Copy-Item $_.FullName $outDir -Force
+          }
+        }
+
+        # Assets (themes, blocklists, etc.)
+        if (Test-Path "assets") {
+          Copy-Item "assets" "$outDir/assets" -Recurse -Force
+        }
+
+        # README
+        Copy-Item "README.md" $outDir -Force -ErrorAction SilentlyContinue
+
+        Write-Host "`nArtifact contents:"
+        Get-ChildItem $outDir -Recurse | Select-Object FullName
+
+    # ── 11. Upload artifact (every build) ─────────────────────────────────────
+    - name: ⬆️  Upload build artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ matrix.artifact }}-${{ github.sha }}
+        path: dist/zap-browser/
+        retention-days: 14
+        if-no-files-found: warn
+
+    # ── 12. Create GitHub Release (on version tags only) ──────────────────────
+    - name: 🚀 Create GitHub Release
+      if: startsWith(github.ref, 'refs/tags/v')
+      uses: softprops/action-gh-release@v2
+      with:
+        name: "⚡ ZAP Browser ${{ github.ref_name }}"
+        body: |
+          ## ⚡ ZAP Browser ${{ github.ref_name }}
+
+          A lightweight, privacy-first browser.
+
+          ### 📦 Installation (Windows)
+          1. Download `zap-windows-x64.zip` below
+          2. Extract anywhere
+          3. Run `zap.exe`
+
+          > **Note:** Install [Ollama](https://ollama.com) for AI features.
+          > Tor is bundled — no separate install needed.
+
+          ### What's new
+          See [commits](https://github.com/${{ github.repository }}/commits/${{ github.ref_name }}) for changes.
+        files: |
+          dist/zap-browser/**/*
+        draft: false
+        prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
+        generate_release_notes: true
+
+# ── Lint / Static Analysis (optional parallel job) ────────────────────────────
+  lint:
+    name: 🔍 Static Analysis
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Run cppcheck
+      shell: pwsh
+      run: |
+        # Install cppcheck via winget or chocolatey if available
+        $cppcheck = Get-Command "cppcheck" -ErrorAction SilentlyContinue
+        if ($cppcheck) {
+          cppcheck --enable=all --std=c++20 `
+            --suppress=missingInclude `
+            --suppress=missingIncludeSystem `
+            --error-exitcode=1 `
+            src/ 2>&1 | Tee-Object -FilePath cppcheck-report.txt
+        } else {
+          Write-Host "cppcheck not installed — skipping static analysis"
+          Write-Host "To enable: add cppcheck to the runner or use a Docker image"
+        }
+      continue-on-error: true
+
+    - name: Upload cppcheck report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: cppcheck-report
+        path: cppcheck-report.txt
+        if-no-files-found: ignore
+        retention-days: 7
