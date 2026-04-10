@@ -114,15 +114,21 @@ jobs:
         & 7z x "cef.tar.bz2" -o"."          -y | Out-Null
         & 7z x "cef.tar"     -o"third_party" -y | Out-Null
 
-        # Rename extracted folder to the fixed name "cef"
+        # Move extracted folder to the fixed name "third_party/cef"
+        # NOTE: Rename-Item requires just the new *name*, not a path —
+        #       so we use Move-Item with fully-qualified absolute paths instead.
         $extracted = Get-ChildItem "third_party" -Directory `
           | Where-Object { $_.Name -like "cef_binary_*" } `
           | Select-Object -First 1
 
         if ($extracted) {
-          Rename-Item $extracted.FullName "third_party\cef" -Force
-          Write-Host "CEF ready at third_party/cef"
+          $dest = Join-Path (Resolve-Path "third_party").Path "cef"
+          Move-Item -Path $extracted.FullName -Destination $dest -Force
+          Write-Host "CEF ready at: $dest"
         } else {
+          # Dump what is in third_party/ to aid debugging
+          Write-Host "Contents of third_party/:"
+          Get-ChildItem "third_party" | Select-Object Name | Format-Table
           throw "CEF extraction failed — no cef_binary_* folder found in third_party/"
         }
 
