@@ -62,7 +62,6 @@ CefRefPtr<CefRequestContext> CookieIsolator::createIsolatedContext(
     CefRequestContextSettings settings;
     CefString(&settings.cache_path) = profilePath.toStdWString();
     settings.persist_session_cookies = false; // Don't persist session cookies
-    settings.persist_user_preferences = false;
     return CefRequestContext::CreateContext(settings, nullptr);
 }
 

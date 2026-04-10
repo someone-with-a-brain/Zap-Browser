@@ -17,8 +17,9 @@ AutoUpdater::AutoUpdater(QObject* parent)
 
 void AutoUpdater::CheckForUpdates()
 {
-    QNetworkRequest req(QUrl(RELEASES_API_URL));
-    req.setHeader(QNetworkRequest::UserAgentHeader, "ZapBrowser/1.0");
+    QNetworkRequest req;
+    req.setUrl(QUrl(RELEASES_API_URL));
+    req.setRawHeader("User-Agent", "ZapBrowser/1.0");
     req.setTransferTimeout(10000);
     nam_->get(req);
     qDebug() << "[AutoUpdater] Checking for updates...";

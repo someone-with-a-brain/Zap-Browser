@@ -7,6 +7,11 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
+if(WIN32)
+    # Prevent windows.h from defining min/max macros that clash with STL
+    add_definitions(-DNOMINMAX)
+endif()
+
 # ─── Output Directories ──────────────────────────────────────────────────────
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
@@ -142,7 +147,9 @@ if(CEF_FOUND)
     target_compile_definitions(zap PRIVATE ZAP_CEF_ENABLED)
 
     # CEF include root (for #include "include/cef_app.h" etc.)
+    # We apply this to both zap and the generated autogen files
     target_include_directories(zap PRIVATE "${CEF_ROOT}")
+    set_target_properties(zap PROPERTIES AUTOMOC_MOC_OPTIONS "-D_UNICODE;-DUNICODE")
 
     # Link the wrapper (builds from source) + the main CEF shared library
     # CEF_STANDARD_LIBS is set by cef_variables.cmake (e.g. libcef.lib on Win)

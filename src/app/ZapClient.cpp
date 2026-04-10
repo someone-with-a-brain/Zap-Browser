@@ -5,6 +5,7 @@
 #include "privacy/BlockList.h"
 #include "include/cef_request.h"
 #include "include/cef_menu_model.h"
+#include "include/cef_parser.h"
 #include "include/cef_resource_request_handler.h"
 
 // ─── ZapResourceHandler ───────────────────────────────────────────────────────

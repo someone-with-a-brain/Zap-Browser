@@ -45,9 +45,6 @@ int main(int argc, char* argv[])
     //──────────────────────────────────────────────────────────────────────────
     // 2. Qt Application Setup
     //──────────────────────────────────────────────────────────────────────────
-    QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
-    QApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
-
     QApplication app(argc, argv);
     app.setApplicationName("ZAP Browser");
     app.setApplicationVersion("1.0.0");
@@ -66,10 +63,11 @@ int main(int argc, char* argv[])
     settings.multi_threaded_message_loop = false; // We pump CEF manually
 
     // Cache & user-data paths (local, never synced)
+    // root_cache_path is the new equivalent of user_data_path in modern CEF
+    CefString(&settings.root_cache_path) =
+        (dataPath + "/userdata").toStdWString();
     CefString(&settings.cache_path) =
         (dataPath + "/cache").toStdWString();
-    CefString(&settings.user_data_path) =
-        (dataPath + "/userdata").toStdWString();
 
     // Disable CEF telemetry / crash reporting
     settings.remote_debugging_port = 0;
